@@ -1,21 +1,59 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 
 const LINKS = [
-  { href: "/",               label: "home"        },
-  { href: "/about",          label: "about"       },
-  { href: "/skills",         label: "skills"      },
-  { href: "/projects",       label: "projects"    },
-  { href: "/experience",     label: "experience"  },
-  { href: "/certifications", label: "certs"       },
-  { href: "/contact",        label: "contact"     },
+  { href: "#hero",           id: "hero",           label: "home"       },
+  { href: "#about",          id: "about",          label: "about"      },
+  { href: "#skills",         id: "skills",         label: "skills"     },
+  { href: "#projects",       id: "projects",       label: "projects"   },
+  { href: "#experience",     id: "experience",     label: "experience" },
+  { href: "#certifications", id: "certifications", label: "certs"      },
+  { href: "#contact",        id: "contact",        label: "contact"    },
 ];
 
 export default function Nav() {
-  const pathname = usePathname();
+  const [active, setActive] = useState<string>("hero");
+
+  useEffect(() => {
+    const sections = LINKS
+      .map(({ id }) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+
+    if (sections.length === 0) return;
+
+    // Track intersection ratio for each section; pick the one most in view.
+    const ratios = new Map<string, number>();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          ratios.set(entry.target.id, entry.intersectionRatio);
+        }
+
+        let topId = "hero";
+        let topRatio = 0;
+        for (const [id, ratio] of ratios) {
+          if (ratio > topRatio) {
+            topRatio = ratio;
+            topId = id;
+          }
+        }
+
+        if (topRatio > 0) setActive(topId);
+      },
+      {
+        // Offset for fixed nav (h-14 = 56px) so the section under the nav counts.
+        rootMargin: "-56px 0px -40% 0px",
+        threshold: [0, 0.1, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <motion.nav
@@ -31,9 +69,9 @@ export default function Nav() {
       } as React.CSSProperties}
     >
       <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
-        {/* Logo */}
+        {/* Logo — scrolls back to hero */}
         <Link
-          href="/"
+          href="#hero"
           className="font-mono text-sm tracking-wider transition-opacity hover:opacity-80"
           style={{ color: "var(--em)" }}
         >
@@ -44,17 +82,17 @@ export default function Nav() {
 
         {/* Links */}
         <ul className="hidden md:flex items-center gap-6">
-          {LINKS.map(({ href, label }) => {
-            const active = pathname === href;
+          {LINKS.map(({ href, id, label }) => {
+            const isActive = active === id;
             return (
               <li key={href}>
                 <Link
                   href={href}
                   className="relative font-mono text-xs tracking-widest uppercase transition-colors duration-200"
-                  style={{ color: active ? "var(--em)" : "var(--dim)" }}
+                  style={{ color: isActive ? "var(--em)" : "var(--dim)" }}
                 >
                   {label}
-                  {active && (
+                  {isActive && (
                     <motion.span
                       layoutId="nav-indicator"
                       className="absolute -bottom-0.5 left-0 right-0 h-px"
